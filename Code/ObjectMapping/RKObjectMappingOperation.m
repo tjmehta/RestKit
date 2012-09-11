@@ -262,7 +262,28 @@ BOOL RKObjectIsValueEqualToValue(id sourceValue, id destinationValue) {
                 RKLogError(@"Validation failed while mapping attribute at key path '%@' to value %@. Error: %@", keyPath, *value, [_validationError localizedDescription]);
                 RKLogValidationError(_validationError);
             } else {
-                RKLogWarning(@"Destination object %@ rejected attribute value %@ for keyPath %@. Skipping...", self.destinationObject, *value, keyPath);
+                NSRange dotRange = {0, keyPath.length};
+                dotRange = [keyPath rangeOfString:@"."];
+                NSString *pathSoFar;
+                NSUInteger location;
+                NSUInteger length;
+                //                BOOL
+                if (dotRange.location != NSNotFound) {
+                    while (dotRange.location != NSNotFound) {
+                        pathSoFar = [keyPath substringToIndex:dotRange.location];
+                        if ([self.destinationObject valueForKeyPath:pathSoFar] == nil) {
+                            [self.destinationObject setValue:[NSMutableDictionary new] forKeyPath:pathSoFar];
+                        }
+                        location = (dotRange.location+1);
+                        length = ([keyPath length] - location);
+                        dotRange = [keyPath rangeOfString:@"." options:0 range:(NSRange){location, length}];
+                        // else continue
+                    }
+                    return [self validateValue:value atKeyPath:keyPath];
+                }
+                else {
+                    RKLogWarning(@"Destination object %@ rejected attribute value %@ for keyPath %@. Skipping...", self.destinationObject, *value, keyPath);
+                }
             }
         }
     }
